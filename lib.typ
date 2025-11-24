@@ -56,19 +56,25 @@
 }
 
 // Decide whether to skip affiliation superscripts
-#let shouldSkipAffSuperscripts(authors, aff_keys) = {
-  if authors.len() == 1 {
-    true
-  } else if aff_keys.len() == 1 {
+// `affiliation-style` mimics REVTeX groupedaddress / superscriptaddress logic
+//   "superscript": always show numeric affiliation superscripts
+//   "plain":       never show numeric affiliation superscripts
+//   "auto":        show superscripts only if there is more than one author
+//                  and more than one distinct affiliation (default)
+#let shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style) = {
+  if affiliation-style == "superscript" {
+    false
+  } else if affiliation-style == "plain" {
     true
   } else {
-    false
+    // auto: skip only if there's a single affiliation overall
+    aff_keys.len() == 1
   }
 }
 
 // Format the inline author block (name + affiliation sup + star-based notes/emails).
-#let format-author-names(authors, aff_keys, mergedStuff) = {
-  let skipAff = shouldSkipAffSuperscripts(authors, aff_keys)
+#let format-author-names(authors, aff_keys, mergedStuff, affiliation-style) = {
+  let skipAff = shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style)
   let n = authors.len()
   let out = ""
 
@@ -114,7 +120,7 @@
 
     // Turn sups into a single superscript
     if sups.len() == 1 {
-      out += super([$#sups.at(0)$])
+      out += super(sups.at(0))
     } else if sups.len() > 1 {
       out += super(sups.join(", "))
     }
@@ -124,8 +130,11 @@
 }
 
 // Format the affiliation lines
-#let format-affiliations(aff_keys, affiliations, skip) = {
-  set text(size: 9pt, weight: "regular")
+#let format-affiliations(aff_keys, affiliations, skip, layout) = {
+  set text(
+    size: if layout == "preprint" or layout == "onecolumn" { 10pt } else { 9pt },
+    weight: "regular",
+  )
   if skip {
     // If skipping, no numbering
     for aff in aff_keys {
@@ -136,7 +145,7 @@
     // Otherwise, number them
     for aff in aff_keys {
       let num = indexOf(aff_keys, aff, 0) + 1
-      [#super($num$)_#affiliations.at(aff)_]
+      [#super(str(num))_ #affiliations.at(aff)_]
       v(-2pt)
     }
   }
@@ -172,8 +181,21 @@
   abstract-title: none,
   bibliography-title: "References",
   show-grid: false,
-  body,
+  // --- REVTeX-like options ---
+  journal: "aps",              // "aps" or "aip" (affects bibliography style)
+  layout: "reprint",           // "preprint", "reprint", "twocolumn", "onecolumn"
+  affiliation-style: "auto",   // "auto", "superscript", "plain"
+  date: none,                  // optional date line under affiliations
+  pacs: none,                  // e.g. [03.65.Yz, 42.50.Ct]
+  keywords: none,              // free text or sequence
+  show-pacs: true,
+  show-keywords: true,
+  preprint-id: none,           // like \preprint in REVTeX (upper-right corner)
+  aps-journal: "physrev",     // "physrev" (default) or "prl" for PRL-like headings
+  body
 ) = {
+
+  let is-prl = aps-journal == "prl"
 
   // ------------------------------------------------
   // 1) SANITIZE AUTHOR DATA
@@ -230,7 +252,15 @@
   // ------------------------------------------------
   // 4) PAGE + FONT SETTINGS
   // ------------------------------------------------
-  set page(columns: 2, numbering: "1", 
+  set page(
+    columns: if layout == "reprint" or layout == "twocolumn" { 2 } else { 1 },
+    numbering: "1",
+    header: if layout == "preprint" {
+      // Simple running title in the header, similar to REVTeX preprint
+      align(right)[#title]
+    } else {
+      none
+    },
     ..if paper-size == "a4" {
       (paper: "a4", margin: (top: 37mm, bottom: 19mm, x: 20mm))
     } else if paper-size in ("letter", "us-letter") {
@@ -248,14 +278,21 @@
       ])
     }
   )
-  set columns(gutter: 0.25in)
+  // Column gutter is only relevant for two-column layouts
+  set columns(gutter: if layout == "reprint" or layout == "twocolumn" { 0.25in } else { 0pt })
 
   // Adjust text families as desired
-  set text(font: "TeX Gyre Termes", size: 10pt)
+  set text(
+    font: "TeX Gyre Termes",
+    size: if layout == "preprint" or layout == "onecolumn" { 12pt } else { 10pt },
+  )
   show math.equation: set text(font: "TeX Gyre Termes Math")
   show link: set text(rgb(0,0,139))
   show ref: set text(rgb(0,0,139))
-  set par(spacing: 0.65em, leading: 0.5em)
+  set par(
+    spacing: if layout == "preprint" or layout == "onecolumn" { 1em } else { 0.65em },
+    leading: if layout == "preprint" or layout == "onecolumn" { 0.8em } else { 0.5em },
+  )
 
   // references
   set math.equation(numbering: "(1)")
@@ -315,6 +352,26 @@
   )
 
   // ------------------------------------------------
+  // 5.5) PREPRINT IDENTIFIER (REVTeX \preprint)
+  // ------------------------------------------------
+  if preprint-id != none {
+    place(
+      top + right,
+      scope: "parent",
+      float: true,
+      {
+        set text(size: 9pt)
+        set align(right)
+        if type(preprint-id) == str {
+          [#preprint-id]
+        } else {
+          preprint-id
+        }
+      }
+    )
+  }
+
+  // ------------------------------------------------
   // 6) TITLE BLOCK
   // ------------------------------------------------
   place(
@@ -334,16 +391,25 @@
       v(8pt)
 
       // Determine affiliation-superscript skipping
-      let skip = shouldSkipAffSuperscripts(authors, aff_keys)
+      let skip = shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style)
 
       // Authors
-      text(size: 10pt, [
-        #format-author-names(authors, aff_keys, mergedStuff)
-      ])
+      text(
+        size: if layout == "preprint" or layout == "onecolumn" { 12pt } else { 10pt },
+        [
+          #format-author-names(authors, aff_keys, mergedStuff, affiliation-style)
+        ]
+      )
       v(0pt)
 
       // Affiliations
-      format-affiliations(aff_keys, affiliations, skip)
+      format-affiliations(aff_keys, affiliations, skip, layout)
+
+      // Optional date line (REVTeX \date)
+      if date != none {
+        v(4pt)
+        text(size: 9pt, style: "italic", [#date])
+      }
     }
   )
 
@@ -357,7 +423,8 @@
   // ------------------------------------------------
   // 7) ABSTRACT
   // ------------------------------------------------
-  set par(first-line-indent: (amount: 1em, all: true), justify: true)
+  // Abstract is set flush left, without first-line indent, as in REVTeX.
+  set par(first-line-indent: (amount: 0em, all: true), justify: true)
   if abstract != none {  
     place(
       top + left,
@@ -366,8 +433,41 @@
       clearance: 0em,
       {
         block(inset: (left:0.75in,right:0.75in), {
-          set text(size: 9pt, weight: "regular")
+          set text(
+            size: if layout == "preprint" or layout == "onecolumn" { 10pt } else { 9pt },
+            weight: "regular",
+          )
+
+          // Optional abstract heading. Semantics:
+          //  - abstract-title == none  => use default "Abstract"
+          //  - abstract-title == false => suppress heading completely
+          //  - otherwise              => use provided content
+          if abstract-title != false {
+            set align(left)
+            set text(weight: "bold")
+            [
+              #if abstract-title == none { [Abstract] } else { abstract-title }
+            ]
+            set text(weight: "regular")
+            v(0.5em)
+          }
+
+          // Body of the abstract
           abstract
+
+          // PACS and Keywords lines in APS / AIP style
+          if pacs != none and show-pacs {
+            v(0.75em)
+            set text(size: 9pt)
+            [PACS numbers: #pacs]
+          }
+
+          if keywords != none and show-keywords {
+            v(0.25em)
+            set text(size: 9pt)
+            let kw = if type(keywords) == str { keywords } else { keywords.join(", ") }
+            [Keywords: #kw]
+          }
         })
       }
     )
@@ -386,12 +486,12 @@
   set par(first-line-indent: (amount: 1em), justify: true)
 
   // set heading(numbering: "I.A")
-  set heading(numbering: numbly(
+  set heading(numbering: if is-prl { none } else { numbly(
     "{1:I}", // use {level:format} to specify the format
     "{2:A}", // if format is not specified, arabic numbers will be used
     "{3:1}", // here, we only want the 3rd level
     ""
-  ))
+  ) })
 
   show heading.where(level: 1): it => {
     set align(center)
@@ -399,7 +499,11 @@
     block(
       above: 2em,
       below: 1em,
-      [#counter(heading).display(it.numbering). #upper[#it.body]]
+      if is-prl [
+        #upper[#it.body]
+      ] else [
+        #counter(heading).display(it.numbering). #upper[#it.body]
+      ]
     )
   }
 
@@ -409,7 +513,11 @@
     block(
       above: 2em,
       below: 1em,
-      [#counter(heading).display(it.numbering). #it.body]
+      if is-prl [
+        #it.body
+      ] else [
+        #counter(heading).display(it.numbering). #it.body
+      ]
     )
   }
 
@@ -419,7 +527,11 @@
     block(
       above: 1.5em,
       below: 1em,
-      [#counter(heading).display(it.numbering). #it.body]
+      if is-prl [
+        #it.body
+      ] else [
+        #counter(heading).display(it.numbering). #it.body
+      ]
     )
   }
 
@@ -459,9 +571,9 @@
   set figure.caption(separator: [. ])
   set math.equation(numbering: "(1)")
   show math.equation: it => {
-    if it.block and not it.has("label") [
+    if it.block and it.numbering != none and not it.has("label") [
       #counter(math.equation).update(v => v - 1)
-      #math.equation(it.body, block: true, numbering: none)#label("")
+      #math.equation(it.body, block: true, numbering: none)
     ] else {
       it
     }  
@@ -472,7 +584,15 @@
   // ------------------------------------------------
   let bib_state = state("bib-called", false)
 
-  set bibliography(title: none, style: "american-physics-society")
+  // Switch between APS / AIP default bibliography styles
+  set bibliography(
+    title: none,
+    style: if journal == "aip" {
+      "american-institute-of-physics"
+    } else {
+      "american-physics-society"
+    },
+  )
 
   show bibliography: it => {
 
@@ -480,12 +600,22 @@
     bib_state.update(bib-called => true)
 
     if acknowledgment != none {
-      [==== Acknowledgment. 
+      [==== Acknowledgments.
       #acknowledgment]
     }
 
-    // Now the references heading + items
     v(1em)
+
+    // "References" heading
+    if bibliography-title != none {
+      align(center, {
+        set text(size: 9pt, weight: "bold", style: "normal", hyphenate: false)
+        [#upper[#bibliography-title]]
+      })
+      v(0.5em)
+    }
+
+    // Separator rule before the reference list
     align(center, line(length: 70%, stroke: 0.5pt))
     v(1em)
 

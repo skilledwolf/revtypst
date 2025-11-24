@@ -7,6 +7,10 @@
 
 #show: revtypst.with(
   paper-size: "us-letter",
+  // Optional heading for the abstract: none => "Abstract", false => hide, or custom content
+  abstract-title: false,
+  // Bibliography heading (set to none to suppress)
+  bibliography-title: none,
   title: [
     Minimal Typst Document Template
   ],
@@ -23,13 +27,31 @@
     equalContrib: "These authors contributed equally to this work.", 
     deceased: "This author is deceased."
   ),
+  // funding: "Work supported by ...",
   abstract: [
     This is a minimal template showcasing a figure, an equation, and a reference citation.
     #lorem(100)
   ],
   acknowledgment: [
     We extend our heartfelt thanks to the magical computational spirits at the Celestial Compute Realm, whose enchanted resources powered our numerical adventures. Our work was buoyed by the generous backing of the Arcane Fund of Discovery, the Legendary Grant of Innovation, and a sprinkle of Serendipity Awards. Special thanks go to the whimsical halls of the Infinite Imagination Institute, where midnight epiphanies and caffeinated musings turned challenges into triumphs. To all the unseen forces of creativity and curiosity, we tip our hats in gratitude. 
-  ]
+  ],
+  // Toggle a light layout grid overlay for debugging
+  show-grid: false,
+  // --- REVTeX-like options ---
+  journal: "aps",            // "aps" or "aip" (bibliography style)
+  layout: "reprint",         // "preprint", "reprint", "twocolumn", "onecolumn"
+  affiliation-style: "auto", // "auto", "superscript", "plain"
+  aps-journal: "physrev",    // "physrev" (default) or "prl" for PRL-like headings
+  date: datetime.today().display(),     // dynamic today // replace with string for fixed date
+  pacs: [03.65.Yz, 42.50.Ct], // example PACS codes
+  keywords: (
+    "example keyword",
+    "typst template",
+    "revtypst"
+  ),
+  show-pacs: false,
+  show-keywords: false,
+  preprint-id: none,
 )
 
 = The first section <sec:intro>
