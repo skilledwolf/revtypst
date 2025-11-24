@@ -166,6 +166,53 @@
   v(-6pt)
 }
 
+// -------------------------------
+// 1.5 Appendix helper (REVTeX-like)
+// -------------------------------
+
+// Global state to track how many appendices have been started.
+#let _rev_appendix_state = state("revtypst-appendix", (count: 0))
+
+// Start a new appendix: prints "APPENDIX A: ..." and switches equation
+// numbering to (A1), (A2), ... for that appendix.
+#let appendix(
+  title: none,
+  lbl: none,
+) = {
+  context {
+    let letters = (
+      "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+      "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+    )
+    let next = _rev_appendix_state.get().count + 1
+    if next > letters.len() {
+      panic("revtypst: more than 26 appendices not supported (yet).")
+    }
+    _rev_appendix_state.update(_ => (count: next))
+    let letter = letters.at(next - 1)
+
+    // Reset equation counter and switch numbering pattern for this appendix
+    counter(math.equation).update(_ => 0)
+    set math.equation(numbering: (..nums) => {
+      "(" + letter + str(nums.at(0)) + ")"
+    })
+
+    let heading-label = if lbl != none { label(lbl) } else { none }
+
+    // Heading element (non-floating). We keep numbering off to match REVTeX style.
+    [
+      #heading(
+        level: 1,
+        numbering: none,
+        outlined: false,
+      )[
+        APPENDIX #letter
+        #if title != none { [: #upper(title)] }
+      ]
+      #heading-label
+    ]
+  }
+}
 
 // === MAIN TEMPLATE STARTS ===
 
@@ -196,6 +243,9 @@
 ) = {
 
   let is-prl = aps-journal == "prl"
+
+  // Reset appendix counter for each document invocation to avoid carry-over
+  _rev_appendix_state.update(_ => (count: 0))
 
   // ------------------------------------------------
   // 1) SANITIZE AUTHOR DATA
@@ -312,7 +362,7 @@
     let el = it.element
     if el != none and el.func() == eq {
       // Override equation references
-      link(el.location(), [Eq.~#numbering(
+      link(el.location(), [#numbering(
         el.numbering,
         ..counter(eq).at(el.location())
       )])
@@ -501,6 +551,8 @@
       below: 1em,
       if is-prl [
         #upper[#it.body]
+      ] else if it.numbering == none [
+        #upper[#it.body]
       ] else [
         #counter(heading).display(it.numbering). #upper[#it.body]
       ]
@@ -515,6 +567,8 @@
       below: 1em,
       if is-prl [
         #it.body
+      ] else if it.numbering == none [
+        #it.body
       ] else [
         #counter(heading).display(it.numbering). #it.body
       ]
@@ -528,6 +582,8 @@
       above: 1.5em,
       below: 1em,
       if is-prl [
+        #it.body
+      ] else if it.numbering == none [
         #it.body
       ] else [
         #counter(heading).display(it.numbering). #it.body

@@ -1,4 +1,4 @@
-#import "@local/revtypst:0.1.0": revtypst
+#import "@local/revtypst:0.1.0": revtypst, appendix
 //#import "@preview/quick-maths:0.1.0"
 #import "@preview/physica:0.9.4": *
 #import "@preview/unify:0.7.0": unit,num,qty,numrange,qtyrange
@@ -128,8 +128,31 @@ For good measure, we probably want to show a table of data, see @tab:example. #l
 
 #lorem(200)
 
-#lorem(100)
-
 
 
 #bibliography("refs.bib")
+
+
+
+#appendix(title: [Derivation details], lbl: "app:demo-derivation")
+
+The appendix heading is lettered automatically, and equation numbering resets per
+appendix: (A1), (A2), etc. #lorem(20)
+
+$
+  H_{#text("eff")} = H_0 + Σ(ω)
+$ <eq:app-a1>
+
+See Eq.~@eq:app-a1 for the starting point of the derivation. #lorem(20)
+
+#appendix(title: [Finite-size correction], lbl: "app:demo-fse")
+
+In the second appendix the numbering switches to (B1), (B2), ... automatically.
+
+$
+  Δ E_N ≈ (pi^2 / (2 m L^2)) N^2
+$ <eq:app-b1>
+
+Equation @eq:app-b1 now reads with the correct lettered index. #lorem(20)
+
+#lorem(100)

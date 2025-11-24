@@ -20,7 +20,8 @@
 *Environment*
 
 - [ ] Implement `outline` fix (currently raises error due to headline definitions)
-- [ ] `Appendix` environment 
+- [x] `Appendix` environment
+- [ ] Wide equations helper
 - [ ] Work out a way to get solid double line around tables 
 
 *Other*
@@ -48,7 +49,7 @@ To use it locally in your own project:
 2. Create a `paper.typ` (or similarly named) entry file.
 3. In `paper.typ`, import and show the template:
    ```typst
-   #import "revtypst.typ": revtypst
+   #import "@local/revtypst:0.1.0": revtypst, appendix
 
    #show: revtypst.with(
      paper-size: "us-letter",
@@ -75,3 +76,9 @@ To use it locally in your own project:
 
    = Section
    Some text ...
+
+   columns(1)[ $ E = m c^2 $ ]
+
+   #appendix[Extra derivations]
+   $ H_\text{eff} = H_0 + \Sigma(\omega) $
+   ```
