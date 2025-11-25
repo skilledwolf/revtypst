@@ -1,10 +1,10 @@
-#import "@local/revtypst:0.1.0": revtypst
+#import "@local/stellar-revtex:0.1.0": stellar-revtex
 //#import "@preview/quick-maths:0.1.0"
 #import "@preview/physica:0.9.4": *
 #import "@preview/unify:0.7.0": unit,num,qty,numrange,qtyrange
 #import "@preview/glossy:0.7.0": init-glossary
 
-#show: revtypst.with(
+#show: stellar-revtex.with(
   paper-size: "us-letter",
   // Paper title
   title: [

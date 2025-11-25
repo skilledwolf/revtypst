@@ -1,5 +1,5 @@
 [package]
-name = "revtypst"
+name = "stellar-revtex"
 version = "0.1.0"
 entrypoint = "lib.typ"
 authors = ["Tobias M. R. Wolf"]

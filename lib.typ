@@ -1,5 +1,5 @@
 /*
- * revtypst template, Copyright (c) 2025 Tobias Wolf <public@wolft.net>
+ * stellar-revtex template, Copyright (c) 2025 Tobias Wolf <public@wolft.net>
  *
  * Based on the JACoW Typst template [https://github.com/eltos/accelerated-jacow/], Copyright (c) 2024 Philipp Niedermayer (github.com/eltos)
  */
@@ -62,13 +62,29 @@
 //   "auto":        show superscripts only if there is more than one author
 //                  and more than one distinct affiliation (default)
 #let shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style) = {
+  // Helper: check whether every author lists the exact same set of affiliations.
+  // If so, superscripts are redundant even when there are multiple affiliations.
+  let everyoneSharesAffs = {
+    if authors.len() == 0 { true } else {
+      let first = authors.at(0).affiliation
+      let same = true
+      for (i, a) in authors.enumerate() {
+        if i != 0 and a.affiliation != first {
+          same = false
+        }
+      }
+      same
+    }
+  }
+
   if affiliation-style == "superscript" {
     false
   } else if affiliation-style == "plain" {
     true
   } else {
-    // auto: skip only if there's a single affiliation overall
-    aff_keys.len() == 1
+    // auto: skip if there's a single affiliation overall, only one author,
+    // or if all authors share the exact same affiliation set.
+    aff_keys.len() == 1 or authors.len() <= 1 or everyoneSharesAffs
   }
 }
 
@@ -171,7 +187,7 @@
 // -------------------------------
 
 // Global state to track how many appendices have been started.
-#let _rev_appendix_state = state("revtypst-appendix", (count: 0))
+#let _rev_appendix_state = state("stellar-revtex-appendix", (count: 0))
 
 // Start a new appendix: prints "APPENDIX A: ..." and switches equation
 // numbering to (A1), (A2), ... for that appendix.
@@ -186,7 +202,7 @@
     )
     let next = _rev_appendix_state.get().count + 1
     if next > letters.len() {
-      panic("revtypst: more than 26 appendices not supported (yet).")
+      panic("stellar-revtex: more than 26 appendices not supported (yet).")
     }
     _rev_appendix_state.update(_ => (count: next))
     let letter = letters.at(next - 1)
@@ -216,7 +232,7 @@
 
 // === MAIN TEMPLATE STARTS ===
 
-#let revtypst(
+#let stellar-revtex(
   title: none,
   authors: (),
   affiliations: (:),
