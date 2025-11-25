@@ -589,6 +589,8 @@
     "{3:1}", // here, we only want the 3rd level
     ""
   ) })
+  // Only include levels 1-3 in the outline; hide level 4+ (paragraph-style).
+  show outline.entry: it => if it.level >= 4 { none } else { it }
 
   show heading.where(level: 1): it => {
     set align(center)
@@ -705,8 +707,10 @@
     bib_state.update(bib-called => true)
 
     if acknowledgment != none {
-      [==== Acknowledgments.
-      #acknowledgment]
+      v(0.5em)
+      heading(level: 4, numbering: none, outlined: false)[Acknowledgments ---]
+      // v(0.4em)
+      acknowledgment
     }
 
     v(1em)

@@ -132,7 +132,6 @@ For good measure, we probably want to show a table of data, see @tab:example. #l
 #lorem(200)
 
 
-
 #bibliography("refs.bib")
 
 
