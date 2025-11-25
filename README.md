@@ -27,9 +27,9 @@ On Linux: `~/.local/share/typst/packages/local/stellar-revtex/0.1.0` (same layou
 
 2) In your document (e.g. `paper.typ`) import and show the template:
 ```typst
-#import "@local/stellar-revtex:0.1.0": stellar_revtex, appendix
+#import "@local/stellar-revtex:0.1.0": stellar-revtex, appendix
 
-#show: stellar_revtex.with(
+#show: stellar-revtex.with(
   title: [Interesting Results],
   authors: ((name: "A. Author", at: "inst", email: "a@author.edu"),),
   affiliations: (inst: "Institute of Examples"),
@@ -50,6 +50,7 @@ More details.
 - `paper-size`: `"us-letter"` (default) or `"a4"`.
 - `layout`: `"preprint"` (12 pt, 1-col header), `"reprint"` (APS 2-col), `"twocolumn"`, `"onecolumn"`.
 - `journal`: `"aps"` or `"aip"` (bibliography style); `aps-journal`: `"physrev"` or `"prl"` (heading styling).
+- `font-size`: `10pt`, `11pt`, or `12pt`; defaults to `12pt` for `preprint`/`onecolumn`, `10pt` for `reprint`/`twocolumn` (REVTeX-like).
 - `affiliation-style`: `"auto"` (skip superscripts if only one affiliation), `"superscript"`, `"plain"`.
 - `preprint-id`: string or content placed top-right (REVTeX `\preprint`).
 - `abstract-title`: `none` (default "Abstract"), `false` (hide), or custom content; `bibliography-title` analogous.
@@ -70,7 +71,7 @@ More details.
 *Article options*
 - [x] Two column
 - [x] One column
-- [ ] Font size options
+- [x] Font size options
 
 *Environment*
 - [x] Implement `outline` fix (currently raises error due to headline definitions)

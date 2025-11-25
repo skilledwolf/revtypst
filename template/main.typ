@@ -7,6 +7,7 @@
 
 #show: stellar-revtex.with(
   paper-size: "us-letter",
+  // font-size: 10pt,
   // Optional heading for the abstract: none => "Abstract", false => hide, or custom content
   abstract-title: false,
   // Bibliography heading (set to none to suppress)

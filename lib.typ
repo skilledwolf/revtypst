@@ -88,6 +88,8 @@
   }
 }
 
+#let smallerTextSize(base) = if base >= 11pt { base - 2pt } else { base - 1pt }
+
 #let mergedNoteLabelName(idx) = "stellar-revtex-note-" + str(idx)
 
 // Format the inline author block (name + affiliation sup + star-based notes/emails).
@@ -150,11 +152,8 @@
 }
 
 // Format the affiliation lines
-#let format-affiliations(aff_keys, affiliations, skip, layout) = {
-  set text(
-    size: if layout == "preprint" or layout == "onecolumn" { 10pt } else { 9pt },
-    weight: "regular",
-  )
+#let format-affiliations(aff_keys, affiliations, skip, layout, aff-size) = {
+  set text(size: aff-size, weight: "regular")
   if skip {
     // If skipping, no numbering
     for aff in aff_keys {
@@ -248,6 +247,7 @@
   abstract-title: none,
   bibliography-title: "References",
   show-grid: false,
+  font-size: none,          // 10pt / 11pt / 12pt or none for layout-based default
   // --- REVTeX-like options ---
   journal: "aps",              // "aps" or "aip" (affects bibliography style)
   layout: "reprint",           // "preprint", "reprint", "twocolumn", "onecolumn"
@@ -266,6 +266,23 @@
 
   // Reset appendix counter for each document invocation to avoid carry-over
   _rev_appendix_state.update(_ => (count: 0))
+
+  // Resolve base font size: explicit option (10/11/12 pt) or layout-based default.
+  let body-font-size = {
+    if font-size != none {
+      let fs = if type(font-size) == int { font-size*1pt } else { font-size }
+      if not (fs == 10pt or fs == 11pt or fs == 12pt) {
+        panic("stellar-revtex: font-size must be 10pt, 11pt, or 12pt.")
+      }
+      fs
+    } else if layout == "preprint" or layout == "onecolumn" {
+      12pt
+    } else {
+      10pt
+    }
+  }
+  let small-font-size = smallerTextSize(body-font-size)
+  let title-font-size = if body-font-size >= 11pt { body-font-size + 1pt } else { body-font-size + 2pt }
 
   // ------------------------------------------------
   // 1) SANITIZE AUTHOR DATA
@@ -354,7 +371,7 @@
   // Adjust text families as desired
   set text(
     font: "TeX Gyre Termes",
-    size: if layout == "preprint" or layout == "onecolumn" { 12pt } else { 10pt },
+    size: body-font-size,
   )
   show math.equation: set text(font: "TeX Gyre Termes Math")
   show link: set text(rgb(0,0,139))
@@ -430,7 +447,7 @@
       scope: "parent",
       float: true,
       {
-        set text(size: 9pt)
+        set text(size: small-font-size)
         set align(right)
         if type(preprint-id) == str {
           [#preprint-id]
@@ -454,7 +471,7 @@
       set text(hyphenate: false)
 
       // Title
-      text(size: 12pt, weight: "bold", [
+      text(size: title-font-size, weight: "bold", [
         #(title)
         #if funding != none { titlefootnote(funding) }
       ])
@@ -465,7 +482,7 @@
 
       // Authors
       text(
-        size: if layout == "preprint" or layout == "onecolumn" { 12pt } else { 10pt },
+        size: body-font-size,
         [
           #format-author-names(authors, aff_keys, mergedStuff, affiliation-style)
         ]
@@ -473,12 +490,12 @@
       v(0pt)
 
       // Affiliations
-      format-affiliations(aff_keys, affiliations, skip, layout)
+      format-affiliations(aff_keys, affiliations, skip, layout, small-font-size)
 
       // Optional date line (REVTeX \date)
       if date != none {
         v(4pt)
-        text(size: 9pt, style: "italic", [#date])
+        text(size: small-font-size, style: "italic", [#date])
       }
     }
   )
@@ -504,7 +521,7 @@
       {
         block(inset: (left:0.75in,right:0.75in), {
           set text(
-            size: if layout == "preprint" or layout == "onecolumn" { 10pt } else { 9pt },
+            size: small-font-size,
             weight: "regular",
           )
 
@@ -528,13 +545,13 @@
           // PACS and Keywords lines in APS / AIP style
           if pacs != none and show-pacs {
             v(0.75em)
-            set text(size: 9pt)
+            set text(size: small-font-size)
             [PACS numbers: #pacs]
           }
 
           if keywords != none and show-keywords {
             v(0.25em)
-            set text(size: 9pt)
+            set text(size: small-font-size)
             let kw = if type(keywords) == str { keywords } else { keywords.join(", ") }
             [Keywords: #kw]
           }
@@ -565,7 +582,7 @@
 
   show heading.where(level: 1): it => {
     set align(center)
-    set text(size: 9pt, weight: "bold", style: "normal", hyphenate: false)
+    set text(size: small-font-size, weight: "bold", style: "normal", hyphenate: false)
     block(
       above: 2em,
       below: 1em,
@@ -581,7 +598,7 @@
 
   show heading.where(level: 2): it => {
     set align(center)
-    set text(size: 9pt, weight: "bold", style: "normal", hyphenate: false)
+    set text(size: small-font-size, weight: "bold", style: "normal", hyphenate: false)
     block(
       above: 2em,
       below: 1em,
@@ -597,7 +614,7 @@
 
   show heading.where(level: 3): it => {
     set align(center)
-    set text(size: 9pt, weight: "regular", style: "italic", hyphenate: false)
+    set text(size: small-font-size, weight: "regular", style: "italic", hyphenate: false)
     block(
       above: 1.5em,
       below: 1em,
@@ -613,7 +630,7 @@
 
   show heading.where(level: 4): it => {
     v(6pt)
-    set text(size: 10pt, weight: "regular", style: "italic")
+    set text(size: body-font-size, weight: "regular", style: "italic")
     // h(1em) 
     it.body
   }
@@ -626,11 +643,11 @@
   show figure.where(kind: image): set figure(supplement: [Fig.])
   show figure.where(kind: table): set figure(numbering: "I")
   show figure.where(kind: table): set figure.caption(position: top, separator: [. ])
-  show figure.where(kind: table): set text(size: 9pt)
+  show figure.where(kind: table): set text(size: small-font-size)
 
   show figure.caption: it => {
     align(left, {
-      set text(size: 9pt)
+      set text(size: small-font-size)
       [
         #h(1.3em) #upper[#it.supplement]~
         #context it.counter.display(it.numbering)
@@ -685,7 +702,7 @@
     // "References" heading
     if bibliography-title != none {
       align(center, {
-        set text(size: 9pt, weight: "bold", style: "normal", hyphenate: false)
+        set text(size: small-font-size, weight: "bold", style: "normal", hyphenate: false)
         [#upper[#bibliography-title]]
       })
       v(0.5em)
@@ -695,14 +712,14 @@
     align(center, line(length: 70%, stroke: 0.5pt))
     v(1em)
 
-    set text(size: 9pt)
+    set text(size: small-font-size)
 
     // Pull the merged list from the global state
     let merged = mergedState.get()
 
     // If there's anything in merged, print them before references
     if merged.len() > 0 {
-      set text(size: 9pt, weight: "regular")
+      set text(size: small-font-size, weight: "regular")
 
       // We'll do an itemized list with star-based numbering
       // Each item is either ("note", key) or ("email", addr)
