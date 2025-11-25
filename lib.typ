@@ -223,10 +223,9 @@
       #heading(
         level: 1,
         numbering: none,
-        outlined: false,
+        outlined: true,
       )[
-        APPENDIX #letter
-        #if title != none { [: #upper(title)] }
+        APPENDIX #letter#if title != none { [: #title] }
       ]
       #heading-label
     ]
@@ -381,30 +380,41 @@
     leading: if layout == "preprint" or layout == "onecolumn" { 0.8em } else { 0.5em },
   )
 
-  // references
+  // ------------------------------------------------
+  // references: cross-refs & equation numbers
+  // ------------------------------------------------
   set math.equation(numbering: "(1)")
 
+  // Use APS-style supplements: "Fig." and "Table"
   set ref(supplement: it => {
-    if it.func() == figure and it.kind == image {
-      "Fig."
-    } else if it.func() == table {
-      "Table"
+    if it != none and it.func() == figure and it.kind == image {
+      [Fig.]
+    } else if it != none and (
+      (it.func() == figure and it.kind == table) or
+      it.func() == table
+    ) {
+      [Table]
     } else {
       it.supplement
     }
   })
 
+  // Make in-text references behave nicely:
+  //  - equations: "(1)" style, clickable
+  //  - all refs boxed so justification can't stretch internal spacing
   show ref: it => {
     let eq = math.equation
     let el = it.element
-    if el != none and el.func() == eq {
-      // Override equation references
-      link(el.location(), [#numbering(
+
+    if el == none {
+      box(it)
+    } else if el.func() == eq {
+      box(link(el.location(), numbering(
         el.numbering,
         ..counter(eq).at(el.location())
-      )])
+      )))
     } else {
-      it
+      box(it)
     }
   }
 
@@ -642,16 +652,19 @@
   show figure: set figure(placement: auto, gap: 1em)
   show figure.where(kind: image): set figure(supplement: [Fig.])
   show figure.where(kind: table): set figure(numbering: "I")
-  show figure.where(kind: table): set figure.caption(position: top, separator: [. ])
+  show figure.where(kind: table): set figure.caption(position: top, separator: [.])
   show figure.where(kind: table): set text(size: small-font-size)
+
+  // Global caption separator: "FIG. 1. Caption"
+  set figure.caption(separator: [.])
 
   show figure.caption: it => {
     align(left, {
       set text(size: small-font-size)
       [
-        #h(1.3em) #upper[#it.supplement]~
-        #context it.counter.display(it.numbering)
-        #it.separator 
+        #h(1.3em)
+        #box([#upper[#it.supplement]~#it.counter.display(it.numbering)#it.separator])
+        #sym.space.med
         #it.body
       ]
     })
@@ -661,7 +674,6 @@
   show table: set table(stroke: none)
 
   // Equations
-  set figure.caption(separator: [. ])
   set math.equation(numbering: "(1)")
   show math.equation: it => {
     if it.block and it.numbering != none and not it.has("label") [

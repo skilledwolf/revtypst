@@ -30,7 +30,7 @@
   ),
   // funding: "Work supported by ...",
   abstract: [
-    This is a minimal template showcasing a figure, an equation, and a reference citation.
+    This is a minimal template showcasing a figure, an equation, and a reference citation. 
     #lorem(100)
   ],
   acknowledgment: [
@@ -90,7 +90,7 @@ And here is an important equation to illustrate how math typesetting, labeling a
 $
 E = m c^2 ,
 $ <eq:energy-mass>
-where $m$ is the mass and $c$ is the speed of light. In @eq:energy-mass, we note that #lorem(50)
+where $m$ is the mass and $c$ is the speed of light. In Eq.~@eq:energy-mass, we note that #lorem(50)
 
 For good measure, we probably want to show a table of data, see @tab:example. #lorem(150)
 
