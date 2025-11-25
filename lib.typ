@@ -6,6 +6,41 @@
 
 #import "@preview/numbly:0.1.0": numbly
 
+// Keep a handle to the original footnote element so we can override it
+// inside the template without losing normal footnotes.
+#let _stellar_real_footnote = footnote
+
+// State for “footnote in bibliography” (footinbib) support.
+#let _stellar_footinbib_entries = state("stellar-revtex-footinbib-entries", ())
+#let _stellar_footinbib_raw_mode = state("stellar-revtex-footinbib-raw-mode", false)
+
+// Best-effort conversion from content to a plain string.
+// This is only used to serialize footnotes into a temporary
+// Hayagriva bibliography.
+#let stellar-content-to-str(value) = {
+  if type(value) == str {
+    value
+  } else if type(value) == content {
+    if value.has("text") {
+      if type(value.text) == str {
+        value.text
+      } else {
+        stellar-content-to-str(value.text)
+      }
+    } else if value.has("children") {
+      value.children.map(stellar-content-to-str).join("")
+    } else if value.has("body") {
+      stellar-content-to-str(value.body)
+    } else if value == [ ] {
+      " "
+    } else {
+      str(value)
+    }
+  } else {
+    str(value)
+  }
+}
+
 // -------------------------------
 // 1. Helper Functions
 // -------------------------------
@@ -255,6 +290,7 @@
   keywords: none,              // free text or sequence
   show-pacs: true,
   show-keywords: true,
+  footinbib: false,
   preprint-id: none,           // like \preprint in REVTeX (upper-right corner)
   aps-journal: "physrev",     // "physrev" (default) or "prl" for PRL-like headings
   body
@@ -264,6 +300,10 @@
 
   // Reset appendix counter for each document invocation to avoid carry-over
   _rev_appendix_state.update(_ => (count: 0))
+
+  // Reset footinbib bookkeeping
+  _stellar_footinbib_entries.update(_ => ())
+  _stellar_footinbib_raw_mode.update(_ => false)
 
   // Resolve base font size: explicit option (10/11/12 pt) or layout-based default.
   let body-font-size = {
@@ -504,10 +544,13 @@
     }
   )
 
-  // Title footnotes
-  context{
+  // Title footnotes (always real footnotes, even with `footinbib`)
+  context {
     for (symbol, text) in footnotes.get() {
-      place(footnote(numbering: it => "", {super(symbol) + sym.space.med + text}))
+      place(_stellar_real_footnote(
+        numbering: it => "",
+        { super(symbol) + sym.space.med + text }
+      ))
     }
   }
 
@@ -570,6 +613,30 @@
     clearance: 3.0em,
     { }
   )
+
+  // ------------------------------------------------
+  // 7.5) FOOTINBIB: turn footnotes into bibliography entries
+  // ------------------------------------------------
+  // Inside the document body, remap `footnote` to a helper that records
+  // the note and emits a citation instead of a real footnote mark.
+  let footnote = if footinbib {
+    (..args) => {
+      let pos = args.pos()
+      let body = if pos.len() > 0 { pos.at(0) } else { [ ] }
+
+      // Allocate a fresh note key in order of appearance.
+      let entries = _stellar_footinbib_entries.get()
+      let idx = entries.len() + 1
+      let key = "note" + str(idx)
+
+      _stellar_footinbib_entries.update(e => e + ((key, body),))
+
+      // Use a normal citation instead of a footnote mark.
+      cite(label(key))
+    }
+  } else {
+    _stellar_real_footnote
+  }
 
   // ------------------------------------------------
   // 8) MAIN CONTENT STYLING
@@ -696,70 +763,111 @@
   )
 
   show bibliography: it => {
+    // When we re-enter this rule from within our own call to
+    // `bibliography(combined-sources)`, just render the standard
+    // bibliography and skip all the extra heading / footinbib logic.
+    if _stellar_footinbib_raw_mode.get() {
+      show link: it => text(font: "DejaVu Sans Mono", size: 7.2pt, it)
+      it
+    } else {
+      // Mark that we've called bibliography
+      bib_state.update(bib-called => true)
 
-    // Mark that we've called bibliography
-    bib_state.update(bib-called => true)
+      if acknowledgment != none {
+        [==== Acknowledgments.
+        #acknowledgment]
+      }
 
-    if acknowledgment != none {
-      v(0.5em)
-      heading(level: 4, numbering: none, outlined: false)[Acknowledgments ---]
-      // v(0.4em)
-      acknowledgment
-    }
+      v(1em)
 
-    v(1em)
+      // "References" heading
+      if bibliography-title != none {
+        align(center, {
+          set text(
+            size: small-font-size,
+            weight: "bold",
+            style: "normal",
+            hyphenate: false,
+          )
+          [#upper[#bibliography-title]]
+        })
+        v(0.5em)
+      }
 
-    // "References" heading
-    if bibliography-title != none {
-      align(center, {
-        set text(size: small-font-size, weight: "bold", style: "normal", hyphenate: false)
-        [#upper[#bibliography-title]]
-      })
-      v(0.5em)
-    }
+      // Separator rule before the reference list
+      align(center, line(length: 70%, stroke: 0.5pt))
+      v(1em)
 
-    // Separator rule before the reference list
-    align(center, line(length: 70%, stroke: 0.5pt))
-    v(1em)
+      set text(size: small-font-size)
 
-    set text(size: small-font-size)
+      // Pull the merged list from the global state (author notes & emails)
+      let merged = mergedState.get()
 
-    // Pull the merged list from the global state
-    let merged = mergedState.get()
+      if merged.len() > 0 {
+        set text(size: small-font-size, weight: "regular")
 
-    // If there's anything in merged, print them before references
-    if merged.len() > 0 {
-      set text(size: small-font-size, weight: "regular")
-
-      // We'll do an itemized list with star-based numbering
-      // Each item is either ("note", key) or ("email", addr)
-      // 
-      // NOTE: I wonder if we should have precomputed the merged list? 
-      //       It might allow us to put reference links in the author block
-      //       by using element.location(), i.e., link(element.location(), ...)
-      //       in the author block
-      enum(body-indent:0.25em, numbering: x => starNumber(x+1), 
-        ..for (i, entry) in merged.enumerate() {
-          let (kind, value) = entry
-          let out = none
-          if kind == "note" {
-            out = text(authorNotes.at(default: value,value))
-          } else if kind == "email" {
-            // Print as a mailto: link
-            out = link("mailto:" + value)
-          } else {
-            panic("Unknown kind in merged list")
+        enum(body-indent: 0.25em, numbering: x => starNumber(x + 1),
+          ..for (i, entry) in merged.enumerate() {
+            let (kind, value) = entry
+            let out = none
+            if kind == "note" {
+              out = text(authorNotes.at(default: value, value))
+            } else if kind == "email" {
+              // Print as a mailto: link
+              out = link("mailto:" + value)
+            } else {
+              panic("Unknown kind in merged list")
+            }
+            // Label each item so author superscripts can link here
+            ([#out #label(mergedNoteLabelName(i + 1))],)
           }
-          // Label each item so author superscripts can link here
-          ([#out #label(mergedNoteLabelName(i+1))],)
-        }
-      ) 
-      v(0.5em)
-      
-    }
+        )
+        v(0.5em)
+      }
 
-    show link: it => text(font: "DejaVu Sans Mono", size: 7.2pt, it)
-    it  // bibliography items
+      show link: it => text(font: "DejaVu Sans Mono", size: 7.2pt, it)
+
+      // If footinbib is disabled, just render the original bibliography.
+      if not footinbib {
+        it
+      } else {
+        let entries = _stellar_footinbib_entries.get()
+
+        // If there are no footnote entries, fall back to the original bib.
+        if entries.len() == 0 {
+          it
+        } else {
+          // Build a tiny Hayagriva YAML bibliography containing one
+          // `Misc` entry per footnote, in order of appearance.
+          let yaml = ""
+          for (key, body) in entries {
+            let text = stellar-content-to-str(body)
+            let lines = text.split("\n")
+
+            yaml += key + ":\n"
+            yaml += "  type: Misc\n"
+            yaml += "  title: |\n"
+            for line in lines {
+              yaml += "    " + line + "\n"
+            }
+          }
+
+          let extra_source = bytes(yaml)
+
+          // Combine the user's bibliography sources with our synthetic one.
+          let srcs = it.sources
+          let src_array = if type(srcs) == array { srcs } else { (srcs,) }
+          let combined = src_array + (extra_source,)
+
+          // Render the real bibliography from the merged sources.
+          context {
+            _stellar_footinbib_raw_mode.update(_ => true)
+            bibliography(combined)
+            _stellar_footinbib_raw_mode.update(_ => false)
+          }
+        }
+      }
+    }
   }
 
   body

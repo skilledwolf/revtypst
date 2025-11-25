@@ -13,6 +13,7 @@
   layout: "reprint",         // "preprint", "reprint", "twocolumn", "onecolumn"
   affiliation-style: "auto", // "auto", "superscript", "plain"
   aps-journal: "physrev",    // "physrev" (default) or "prl" for PRL-like headings
+  footinbib: true, 
   // Optional heading for the abstract: none => "Abstract", false => hide, or custom content
   abstract-title: false,
   // Bibliography heading (set to none to suppress)
@@ -35,7 +36,7 @@
   ),
   // funding: "Work supported by ...",
   abstract: [
-    This is a minimal template showcasing a figure, an equation, and a reference citation. 
+    This is a minimal template showcasing a figure, an equation, and a reference citation. asdf
     #lorem(100)
   ],
   acknowledgment: [
@@ -63,7 +64,7 @@ The amazing part is that we can just type and get it rendered live in the previe
 $
   integral_0^infinity f(x) dif x = C,
 $
-and they will be rendered beautifully and instantly. It makes LaTeX feel like a thing of the past.  
+and they will be rendered beautifully and instantly. It makes LaTeX feel like a thing of the past #footnote[Yes, indeed, you'd better believe it!].  
 
 == The subsection of doom <sec:subsec>
 
