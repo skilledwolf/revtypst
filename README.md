@@ -73,7 +73,7 @@ More details.
 - [ ] Font size options
 
 *Environment*
-- [ ] Implement `outline` fix (currently raises error due to headline definitions)
+- [x] Implement `outline` fix (currently raises error due to headline definitions)
 - [x] `Appendix` environment
 - ~~[ ] Wide equations helper~~ _(not possible with current typst layout engine; known limitation)_
 

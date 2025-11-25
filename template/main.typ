@@ -54,6 +54,8 @@
   preprint-id: none,
 )
 
+#outline()
+
 = The first section <sec:intro>
 @sec:intro is the first section of this document. It contains a figure, an equation, and a table. 
 
@@ -72,7 +74,7 @@ and they will be rendered beautifully and instantly. It makes LaTeX feel like a 
 ==== Introduction.
 This document is a minimal example to help you get started with Typst. We can cite references very easily from the same bibliography files as in LaTeX, see Ref.~@doe2023minimal. #lorem(90)
 
-As illustrated in @fig:example, #lorem(200)
+As illustrated in @fig:example, #lorem(100)
 
 #figure(
   image("blue_marble.jpg", width: 8cm),
