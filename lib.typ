@@ -1,7 +1,7 @@
 /*
  * stellar-revtex template, Copyright (c) 2025 Tobias Wolf <public@wolft.net>
  *
- * Based on the JACoW Typst template [https://github.com/eltos/accelerated-jacow/], Copyright (c) 2024 Philipp Niedermayer (github.com/eltos)
+ * inspired by the JACoW Typst template [https://github.com/eltos/accelerated-jacow/], Copyright (c) 2024 Philipp Niedermayer (github.com/eltos)
  */
 
 #import "@preview/numbly:0.1.0": numbly
@@ -10,36 +10,9 @@
 // inside the template without losing normal footnotes.
 #let _stellar_real_footnote = footnote
 
-// State for “footnote in bibliography” (footinbib) support.
-#let _stellar_footinbib_entries = state("stellar-revtex-footinbib-entries", ())
-#let _stellar_footinbib_raw_mode = state("stellar-revtex-footinbib-raw-mode", false)
+// State to track if the user wants a visible "APPENDIX" header
+#let _stellar_show_appendix_heading = state("stellar-revtex-show-appendix-heading", false)
 
-// Best-effort conversion from content to a plain string.
-// This is only used to serialize footnotes into a temporary
-// Hayagriva bibliography.
-#let stellar-content-to-str(value) = {
-  if type(value) == str {
-    value
-  } else if type(value) == content {
-    if value.has("text") {
-      if type(value.text) == str {
-        value.text
-      } else {
-        stellar-content-to-str(value.text)
-      }
-    } else if value.has("children") {
-      value.children.map(stellar-content-to-str).join("")
-    } else if value.has("body") {
-      stellar-content-to-str(value.body)
-    } else if value == [ ] {
-      " "
-    } else {
-      str(value)
-    }
-  } else {
-    str(value)
-  }
-}
 
 // -------------------------------
 // 1. Helper Functions
@@ -91,14 +64,7 @@
 }
 
 // Decide whether to skip affiliation superscripts
-// `affiliation-style` mimics REVTeX groupedaddress / superscriptaddress logic
-//   "superscript": always show numeric affiliation superscripts
-//   "plain":       never show numeric affiliation superscripts
-//   "auto":        show superscripts only if there is more than one author
-//                  and more than one distinct affiliation (default)
 #let shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style) = {
-  // Helper: check whether every author lists the exact same set of affiliations.
-  // If so, superscripts are redundant even when there are multiple affiliations.
   let everyoneSharesAffs = {
     if authors.len() == 0 { true } else {
       let first = authors.at(0).affiliation
@@ -117,8 +83,6 @@
   } else if affiliation-style == "plain" {
     true
   } else {
-    // auto: skip if there's a single affiliation overall, only one author,
-    // or if all authors share the exact same affiliation set.
     aff_keys.len() == 1 or authors.len() <= 1 or everyoneSharesAffs
   }
 }
@@ -127,14 +91,13 @@
 
 #let mergedNoteLabelName(idx) = "stellar-revtex-note-" + str(idx)
 
-// Format the inline author block (name + affiliation sup + star-based notes/emails).
+// Format the inline author block
 #let format-author-names(authors, aff_keys, mergedStuff, affiliation-style) = {
   let skipAff = shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style)
   let n = authors.len()
   let out = ""
 
   for (i, a) in authors.enumerate() {
-    // Insert commas or "and"
     if n == 2 and i == 1 {
       out += " and "
     } else if n > 2 {
@@ -144,59 +107,42 @@
         out += ", "
       }
     }
-
-    // Always add name
     out += a.name
-
-    // Accumulate superscripts
     let sups = ()
-
-    // 1) affiliation numbering if not skipping
     if not skipAff {
       let affNums = a.affiliation.map(aff => str(indexOf(aff_keys, aff, 0) + 1))
       sups += affNums
     }
-
-    // 2) notes
     if "note" in a.keys() {
       let these = if type(a.note) == str { (a.note,) } else { a.note }
       for key in these {
-        // The star index is the position of ("note", key) in mergedStuff
         let idx = indexOf(mergedStuff, ("note", key), 0) + 1
         let dest = label(mergedNoteLabelName(idx))
         sups += (link(dest, starNumber(idx)),)
       }
     }
-
-    // 3) email
     if "email" in a.keys() {
       let idx = indexOf(mergedStuff, ("email", a.email), 0) + 1
       let dest = label(mergedNoteLabelName(idx))
       sups += (link(dest, starNumber(idx)),)
     }
-
-    // Turn sups into a single superscript
     if sups.len() == 1 {
       out += super(sups.at(0))
     } else if sups.len() > 1 {
       out += super(sups.join(", "))
     }
   }
-
   out
 }
 
-// Format the affiliation lines
 #let format-affiliations(aff_keys, affiliations, skip, layout, aff-size) = {
   set text(size: aff-size, weight: "regular")
   if skip {
-    // If skipping, no numbering
     for aff in aff_keys {
       [_#affiliations.at(aff)_]
       v(-2pt)
     }
   } else {
-    // Otherwise, number them
     for aff in aff_keys {
       let num = indexOf(aff_keys, aff, 0) + 1
       [#super(str(num))_ #affiliations.at(aff)_]
@@ -205,67 +151,38 @@
   }
 }
 
-// For optional sub-numbering of headings up to a max level
-#let number-until-with(max-level, schema) = (..numbers) => {
-  if numbers.pos().len() <= max-level {
-    numbering(schema, ..numbers)
-  }
-}
+#let appendix(body) = {
+  // Separate appendix from preceding content
+  v(2em)
 
-// Just a small utility for double lines
-#let doubleline = {
-  line(length: 100%, stroke: 0.5pt)
-  v(-4pt)
-  line(length: 100%, stroke: 0.5pt)
-  v(-6pt)
-}
-
-// -------------------------------
-// 1.5 Appendix helper (REVTeX-like)
-// -------------------------------
-
-// Global state to track how many appendices have been started.
-#let _rev_appendix_state = state("stellar-revtex-appendix", (count: 0))
-
-// Start a new appendix: prints "APPENDIX A: ..." and switches equation
-// numbering to (A1), (A2), ... for that appendix.
-#let appendix(
-  title: none,
-  lbl: none,
-) = {
+  // Add an "Appendix" heading (visible or hidden) so it appears in the outline
   context {
-    let letters = (
-      "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
-      "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-    )
-    let next = _rev_appendix_state.get().count + 1
-    if next > letters.len() {
-      panic("stellar-revtex: more than 26 appendices not supported (yet).")
+    if _stellar_show_appendix_heading.get() {
+      heading(level: 1, numbering: none, outlined: true)[Appendix]
+    } else {
+      place(hide(heading(level: 1, numbering: none, outlined: true)[Appendix]))
     }
-    _rev_appendix_state.update(_ => (count: next))
-    let letter = letters.at(next - 1)
-
-    // Reset equation counter and switch numbering pattern for this appendix
-    counter(math.equation).update(_ => 0)
-    set math.equation(numbering: (..nums) => {
-      "(" + letter + str(nums.at(0)) + ")"
-    })
-
-    let heading-label = if lbl != none { label(lbl) } else { none }
-
-    // Heading element (non-floating). We keep numbering off to match REVTeX style.
-    [
-      #heading(
-        level: 1,
-        numbering: none,
-        outlined: true,
-      )[
-        APPENDIX #letter#if title != none { [: #title] }
-      ]
-      #heading-label
-    ]
   }
+
+  // Reset heading counter so appendix headings start fresh (A, A.1, ...)
+  counter(heading).update(0)
+  set heading(numbering: (..nums) => {
+    let vals = nums.pos()
+    if vals.len() == 1 { numbering("A", ..vals) }
+    else if vals.len() == 2 { numbering("A.1", ..vals) }
+    else { numbering("A.1.a", ..vals) }
+  })
+  set heading(supplement: [Appendix])
+
+  // Reset equation counter ONCE for the whole appendix
+  // and give equations simple labels (A1), (A2), ...
+  counter(math.equation).update(0)
+  set math.equation(numbering: n => "(A" + str(n) + ")")
+
+  body
 }
+
+
 
 // === MAIN TEMPLATE STARTS ===
 
@@ -276,36 +193,29 @@
   abstract: none,
   funding: none,
   acknowledgment: none,
-  authorNotes: (:),  // dictionary noteKey => noteText
+  authorNotes: (:), 
   paper-size: "us-letter",
   abstract-title: none,
   bibliography-title: "References",
-  font-size: none,          // 10pt / 11pt / 12pt or none for layout-based default
-  // --- REVTeX-like options ---
-  journal: "aps",              // "aps" or "aip" (affects bibliography style)
-  layout: "reprint",           // "preprint", "reprint", "twocolumn", "onecolumn"
-  affiliation-style: "auto",   // "auto", "superscript", "plain"
-  date: none,                  // optional date line under affiliations
-  pacs: none,                  // e.g. [03.65.Yz, 42.50.Ct]
-  keywords: none,              // free text or sequence
+  bibliography-file: none,
+  font-size: none,
+  journal: "aps",
+  layout: "reprint",
+  affiliation-style: "auto",
+  date: none,
+  pacs: none,
+  keywords: none,
   show-pacs: true,
   show-keywords: true,
-  footinbib: false,
-  preprint-id: none,           // like \preprint in REVTeX (upper-right corner)
-  aps-journal: "physrev",     // "physrev" (default) or "prl" for PRL-like headings
+  show-appendix-heading: false,
+  preprint-id: none,
+  aps-journal: "physrev",
   body
 ) = {
 
+  _stellar_show_appendix_heading.update(show-appendix-heading)
   let is-prl = aps-journal == "prl"
 
-  // Reset appendix counter for each document invocation to avoid carry-over
-  _rev_appendix_state.update(_ => (count: 0))
-
-  // Reset footinbib bookkeeping
-  _stellar_footinbib_entries.update(_ => ())
-  _stellar_footinbib_raw_mode.update(_ => false)
-
-  // Resolve base font size: explicit option (10/11/12 pt) or layout-based default.
   let body-font-size = {
     if font-size != none {
       let fs = if type(font-size) == int { font-size*1pt } else { font-size }
@@ -322,9 +232,6 @@
   let small-font-size = smallerTextSize(body-font-size)
   let title-font-size = if body-font-size >= 11pt { body-font-size + 1pt } else { body-font-size + 2pt }
 
-  // ------------------------------------------------
-  // 1) SANITIZE AUTHOR DATA
-  // ------------------------------------------------
   for a in authors.filter(a => "names" in a.keys()) {
     for name in a.remove("names") {
       authors.insert(-1, (name: name, ..a))
@@ -343,9 +250,6 @@
   })
   authors = authors.filter(a => "name" in a.keys())
 
-  // ------------------------------------------------
-  // 2) CREATE AFFILIATION ORDER
-  // ------------------------------------------------
   let aff_keys = ()
   for a in authors {
     for aff in a.affiliation {
@@ -355,14 +259,9 @@
     }
   }
 
-  // ------------------------------------------------
-  // 3) GATHER NOTE KEYS & EMAILS => MERGE
-  // ------------------------------------------------
-  let notesUsed = gatherNoteKeys(authors)  // e.g. ("equalContrib", "deceased", ...)
-  let emailsUsed = gatherEmails(authors)   // e.g. ("someone@somewhere", ...)
+  let notesUsed = gatherNoteKeys(authors)
+  let emailsUsed = gatherEmails(authors)
 
-  // Build a single list of items: 
-  //   [("note", "equalContrib"), ("note", "deceased"), ..., ("email", "someone@somewhere"), ...]
   let mergedStuff = ()
   for key in notesUsed {
     mergedStuff += (("note", key),)
@@ -371,17 +270,12 @@
     mergedStuff += (("email", e),)
   }
 
-  // We'll store them in a global state for printing pre-bibliography
   let mergedState = state("notes-emails-list", mergedStuff)
 
-  // ------------------------------------------------
-  // 4) PAGE + FONT SETTINGS
-  // ------------------------------------------------
   set page(
     columns: if layout == "reprint" or layout == "twocolumn" { 2 } else { 1 },
     numbering: "1",
     header: if layout == "preprint" {
-      // Simple running title in the header, similar to REVTeX preprint
       align(right)[#title]
     } else {
       none
@@ -398,15 +292,18 @@
       panic("Unsupported paper-size, use 'a4', 'us-letter' or 'jacow'!")
     },
   )
-  // Column gutter is only relevant for two-column layouts
   set columns(gutter: if layout == "reprint" or layout == "twocolumn" { 0.25in } else { 0pt })
 
-  // Adjust text families as desired
   set text(
-    font: "TeX Gyre Termes",
+    font: ("Times New Roman", "TeX Gyre Termes"),
     size: body-font-size,
   )
-  show math.equation: set text(font: "TeX Gyre Termes Math")
+  show math.equation: set text(font: (
+  "TeX Gyre Termes Math", 
+  "STIX Two Math", 
+  "XITS Math", 
+  "New Computer Modern Math"
+))
   show link: set text(rgb(0,0,139))
   show ref: set text(rgb(0,0,139))
   set par(
@@ -414,12 +311,8 @@
     leading: if layout == "preprint" or layout == "onecolumn" { 0.8em } else { 0.5em },
   )
 
-  // ------------------------------------------------
-  // references: cross-refs & equation numbers
-  // ------------------------------------------------
   set math.equation(numbering: "(1)")
 
-  // Use APS-style supplements: "Fig." and "Table"
   set ref(supplement: it => {
     if it != none and it.func() == figure and it.kind == image {
       [Fig.]
@@ -433,29 +326,28 @@
     }
   })
 
-  // Make in-text references behave nicely:
-  //  - equations: "(1)" style, clickable
-  //  - all refs boxed so justification can't stretch internal spacing
   show ref: it => {
-    let eq = math.equation
-    let el = it.element
+      let eq = math.equation
+      let el = it.element
 
-    if el == none {
-      box(it)
-    } else if el.func() == eq {
-      box(link(el.location(), numbering(
-        el.numbering,
-        ..counter(eq).at(el.location())
-      )))
-    } else {
-      box(it)
+      if el != none and el.func() == eq {
+        // Handle equations with parentheses and links
+        box(link(el.location(), numbering(
+          el.numbering,
+          ..counter(eq).at(el.location())
+        )))
+      } else if el != none {
+        // Handle other cross-references (Figures, Tables) by boxing them
+        // to keep the number attached to the label.
+        box(it)
+      } else {
+        // This path handles citations (el == none). 
+        // We explicitly DO NOT box them to allow the CSL processor 
+        // to group them correctly (e.g., [1-3]).
+        it
+      }
     }
-  }
 
-  // ------------------------------------------------
-  // 5) FOOTNOTES FOR TITLE
-  // ------------------------------------------------
-  // For any optional "funding" or so
   let titlenotenumbering(i) = {
     if i < 6 { ("*", "#", "§", "¶", "‡").at(i - 1) }
     else { (i - 4)*"*" }
@@ -482,9 +374,6 @@
     ]
   )
 
-  // ------------------------------------------------
-  // 5.5) PREPRINT IDENTIFIER (REVTeX \preprint)
-  // ------------------------------------------------
   if preprint-id != none {
     place(
       top + right,
@@ -502,9 +391,6 @@
     )
   }
 
-  // ------------------------------------------------
-  // 6) TITLE BLOCK
-  // ------------------------------------------------
   place(
     top + center,
     scope: "parent",
@@ -514,17 +400,13 @@
       set par(justify: false)
       set text(hyphenate: false)
 
-      // Title
       text(size: title-font-size, weight: "bold", [
         #(title)
         #if funding != none { titlefootnote(funding) }
       ])
       v(8pt)
 
-      // Determine affiliation-superscript skipping
       let skip = shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style)
-
-      // Authors
       text(
         size: body-font-size,
         [
@@ -532,11 +414,8 @@
         ]
       )
       v(0pt)
-
-      // Affiliations
       format-affiliations(aff_keys, affiliations, skip, layout, small-font-size)
 
-      // Optional date line (REVTeX \date)
       if date != none {
         v(4pt)
         text(size: small-font-size, style: "italic", [#date])
@@ -544,7 +423,6 @@
     }
   )
 
-  // Title footnotes (always real footnotes, even with `footinbib`)
   context {
     for (symbol, text) in footnotes.get() {
       place(_stellar_real_footnote(
@@ -554,10 +432,6 @@
     }
   }
 
-  // ------------------------------------------------
-  // 7) ABSTRACT
-  // ------------------------------------------------
-  // Abstract is set flush left, without first-line indent, as in REVTeX.
   set par(first-line-indent: (amount: 0em, all: true), justify: true)
   if abstract != none {  
     place(
@@ -567,35 +441,20 @@
       clearance: 0em,
       {
         block(inset: (left:0.75in,right:0.75in), {
-          set text(
-            size: small-font-size,
-            weight: "regular",
-          )
-
-          // Optional abstract heading. Semantics:
-          //  - abstract-title == none  => use default "Abstract"
-          //  - abstract-title == false => suppress heading completely
-          //  - otherwise              => use provided content
+          set text(size: small-font-size, weight: "regular")
           if abstract-title != false {
             set align(left)
             set text(weight: "bold")
-            [
-              #if abstract-title == none { [Abstract] } else { abstract-title }
-            ]
+            [#if abstract-title == none { [Abstract] } else { abstract-title }]
             set text(weight: "regular")
             v(0.5em)
           }
-
-          // Body of the abstract
           abstract
-
-          // PACS and Keywords lines in APS / AIP style
           if pacs != none and show-pacs {
             v(0.75em)
             set text(size: small-font-size)
             [PACS numbers: #pacs]
           }
-
           if keywords != none and show-keywords {
             v(0.25em)
             set text(size: small-font-size)
@@ -606,66 +465,40 @@
       }
     )
   }
-  place(
-    top + left,
-    float: true,
-    scope: "parent",
-    clearance: 3.0em,
-    { }
-  )
+  place(top + left, float: true, scope: "parent", clearance: 3.0em, { })
 
-  // ------------------------------------------------
-  // 7.5) FOOTINBIB: turn footnotes into bibliography entries
-  // ------------------------------------------------
-  // Inside the document body, remap `footnote` to a helper that records
-  // the note and emits a citation instead of a real footnote mark.
-  let footnote = if footinbib {
-    (..args) => {
-      let pos = args.pos()
-      let body = if pos.len() > 0 { pos.at(0) } else { [ ] }
-
-      // Allocate a fresh note key in order of appearance.
-      let entries = _stellar_footinbib_entries.get()
-      let idx = entries.len() + 1
-      let key = "note" + str(idx)
-
-      _stellar_footinbib_entries.update(e => e + ((key, body),))
-
-      // Use a normal citation instead of a footnote mark.
-      cite(label(key))
-    }
-  } else {
-    _stellar_real_footnote
-  }
-
-  // ------------------------------------------------
-  // 8) MAIN CONTENT STYLING
-  // ------------------------------------------------
   set par(first-line-indent: (amount: 1em), justify: true)
 
-  // set heading(numbering: "I.A")
-  set heading(numbering: if is-prl { none } else { numbly(
-    "{1:I}", // use {level:format} to specify the format
-    "{2:A}", // if format is not specified, arabic numbers will be used
-    "{3:1}", // here, we only want the 3rd level
-    ""
-  ) })
-  // Only include levels 1-3 in the outline; hide level 4+ (paragraph-style).
+  let _main_heading_numbering = numbly(
+    "{1:I}", "{2:A}", "{3:1}", ""
+  )
+  set heading(numbering: _main_heading_numbering)
   show outline.entry: it => if it.level >= 4 { none } else { it }
 
   show heading.where(level: 1): it => {
     set align(center)
     set text(size: small-font-size, weight: "bold", style: "normal", hyphenate: false)
+    let is-appendix = (it.supplement == [Appendix])
     block(
       above: 2em,
       below: 1em,
       if is-prl [
         #upper[#it.body]
-      ] else if it.numbering == none [
-        #upper[#it.body]
-      ] else [
-        #counter(heading).display(it.numbering). #upper[#it.body]
-      ]
+      ] else if is-appendix {
+        // counter(math.equation).update(0)
+        if it.numbering == none {
+           [#upper[#it.body]]
+        } else {
+           let num = counter(heading).display(it.numbering)
+           [Appendix #num. #sym.space.med #upper[#it.body]]
+        }
+      } else {
+        if it.numbering == none [
+          #upper[#it.body]
+        ] else [
+          #counter(heading).display(it.numbering). #upper[#it.body]
+        ]
+      }
     )
   }
 
@@ -675,9 +508,7 @@
     block(
       above: 2em,
       below: 1em,
-      if is-prl [
-        #it.body
-      ] else if it.numbering == none [
+      if is-prl or it.numbering == none [
         #it.body
       ] else [
         #counter(heading).display(it.numbering). #it.body
@@ -691,9 +522,7 @@
     block(
       above: 1.5em,
       below: 1em,
-      if is-prl [
-        #it.body
-      ] else if it.numbering == none [
+      if is-prl or it.numbering == none [
         #it.body
       ] else [
         #counter(heading).display(it.numbering). #it.body
@@ -704,23 +533,16 @@
   show heading.where(level: 4): it => {
     v(6pt)
     set text(size: body-font-size, weight: "regular", style: "italic")
-    // h(1em) 
     it.body
   }
 
-  // Lists
   show list: set list(indent: 1em)
-
-  // Figures
   show figure: set figure(placement: auto, gap: 1em)
   show figure.where(kind: image): set figure(supplement: [Fig.])
   show figure.where(kind: table): set figure(numbering: "I")
   show figure.where(kind: table): set figure.caption(position: top, separator: [.])
   show figure.where(kind: table): set text(size: small-font-size)
-
-  // Global caption separator: "FIG. 1. Caption"
   set figure.caption(separator: [.])
-
   show figure.caption: it => {
     align(left, {
       set text(size: small-font-size)
@@ -732,11 +554,7 @@
       ]
     })
   }
-
-  // Tables
   show table: set table(stroke: none)
-
-  // Equations
   set math.equation(numbering: "(1)")
   show math.equation: it => {
     if it.block and it.numbering != none and not it.has("label") [
@@ -747,133 +565,53 @@
     }  
   }
 
-  // ------------------------------------------------
-  // 9) BIBLIOGRAPHY + NOTES/EMAILS
-  // ------------------------------------------------
-  let bib_state = state("bib-called", false)
-
-  // Switch between APS / AIP default bibliography styles
   set bibliography(
     title: none,
-    style: if journal == "aip" {
-      "american-institute-of-physics"
-    } else {
-      "american-physics-society"
-    },
+    style: if journal == "aip" { "american-institute-of-physics" } else { "american-physics-society" },
   )
 
   show bibliography: it => {
-    // When we re-enter this rule from within our own call to
-    // `bibliography(combined-sources)`, just render the standard
-    // bibliography and skip all the extra heading / footinbib logic.
-    if _stellar_footinbib_raw_mode.get() {
-      show link: it => text(font: "DejaVu Sans Mono", size: 7.2pt, it)
-      it
-    } else {
-      // Mark that we've called bibliography
-      bib_state.update(bib-called => true)
+    if acknowledgment != none {
+      [==== Acknowledgments.
+      #acknowledgment]
+    }
+    v(1em)
 
-      if acknowledgment != none {
-        [==== Acknowledgments.
-        #acknowledgment]
-      }
+    if bibliography-title != none {
+      align(center, {
+        set text(size: small-font-size, weight: "bold", style: "normal", hyphenate: false)
+        [#upper[#bibliography-title]]
+      })
+      v(0.5em)
+    }
+    align(center, line(length: 70%, stroke: 0.5pt))
+    v(1em)
+    set text(size: small-font-size)
 
-      v(1em)
-
-      // "References" heading
-      if bibliography-title != none {
-        align(center, {
-          set text(
-            size: small-font-size,
-            weight: "bold",
-            style: "normal",
-            hyphenate: false,
-          )
-          [#upper[#bibliography-title]]
-        })
-        v(0.5em)
-      }
-
-      // Separator rule before the reference list
-      align(center, line(length: 70%, stroke: 0.5pt))
-      v(1em)
-
-      set text(size: small-font-size)
-
-      // Pull the merged list from the global state (author notes & emails)
+    context {
       let merged = mergedState.get()
-
       if merged.len() > 0 {
         set text(size: small-font-size, weight: "regular")
-
         enum(body-indent: 0.25em, numbering: x => starNumber(x + 1),
           ..for (i, entry) in merged.enumerate() {
             let (kind, value) = entry
-            let out = none
-            if kind == "note" {
-              out = text(authorNotes.at(default: value, value))
-            } else if kind == "email" {
-              // Print as a mailto: link
-              out = link("mailto:" + value)
-            } else {
-              panic("Unknown kind in merged list")
-            }
-            // Label each item so author superscripts can link here
+            let out = if kind == "note" { text(authorNotes.at(default: value, value)) } 
+                      else { link("mailto:" + value) }
             ([#out #label(mergedNoteLabelName(i + 1))],)
           }
         )
         v(0.5em)
       }
-
-      show link: it => text(font: "DejaVu Sans Mono", size: 7.2pt, it)
-
-      // If footinbib is disabled, just render the original bibliography.
-      if not footinbib {
-        it
-      } else {
-        let entries = _stellar_footinbib_entries.get()
-
-        // If there are no footnote entries, fall back to the original bib.
-        if entries.len() == 0 {
-          it
-        } else {
-          // Build a tiny Hayagriva YAML bibliography containing one
-          // `Misc` entry per footnote, in order of appearance.
-          let yaml = ""
-          for (key, body) in entries {
-            let text = stellar-content-to-str(body)
-            let lines = text.split("\n")
-
-            yaml += key + ":\n"
-            yaml += "  type: Misc\n"
-            yaml += "  title: |\n"
-            for line in lines {
-              yaml += "    " + line + "\n"
-            }
-          }
-
-          let extra_source = bytes(yaml)
-
-          // Combine the user's bibliography sources with our synthetic one.
-          let srcs = it.sources
-          let src_array = if type(srcs) == array { srcs } else { (srcs,) }
-          let combined = src_array + (extra_source,)
-
-          // Render the real bibliography from the merged sources.
-          context {
-            _stellar_footinbib_raw_mode.update(_ => true)
-            bibliography(combined)
-            _stellar_footinbib_raw_mode.update(_ => false)
-          }
-        }
-      }
     }
+
+    show link: it => text(font: ("Courier New", "Consolas", "Menlo", "Liberation Mono"), size: 7.2pt, it)
+    it
   }
 
   body
 
-  context if not (bib_state.get()) {
-    // If bibliography wasn't called, we should call it now
-    bibliography(())
+  // Bibliography is generated once at the end to avoid duplicate sources
+  if bibliography-file != none {
+    bibliography(bibliography-file)
   }
 }

@@ -13,7 +13,7 @@
   layout: "reprint",         // "preprint", "reprint", "twocolumn", "onecolumn"
   affiliation-style: "auto", // "auto", "superscript", "plain"
   aps-journal: "physrev",    // "physrev" (default) or "prl" for PRL-like headings
-  footinbib: true, 
+  show-appendix-heading: false,
   // Optional heading for the abstract: none => "Abstract", false => hide, or custom content
   abstract-title: false,
   // Bibliography heading (set to none to suppress)
@@ -36,8 +36,8 @@
   ),
   // funding: "Work supported by ...",
   abstract: [
-    This is a minimal template showcasing a figure, an equation, and a reference citation. asdf
-    #lorem(100)
+    This is a minimal template showcasing a figure, an equation, and a reference citation. 
+    #lorem(100) 
   ],
   acknowledgment: [
     We extend our heartfelt thanks to the magical computational spirits at the Celestial Compute Realm, whose enchanted resources powered our numerical adventures. Our work was buoyed by the generous backing of the Arcane Fund of Discovery, the Legendary Grant of Innovation, and a sprinkle of Serendipity Awards. Special thanks go to the whimsical halls of the Infinite Imagination Institute, where midnight epiphanies and caffeinated musings turned challenges into triumphs. To all the unseen forces of creativity and curiosity, we tip our hats in gratitude. 
@@ -64,7 +64,7 @@ The amazing part is that we can just type and get it rendered live in the previe
 $
   integral_0^infinity f(x) dif x = C,
 $
-and they will be rendered beautifully and instantly. It makes LaTeX feel like a thing of the past #footnote[Yes, indeed, you'd better believe it!].  
+and they will be rendered beautifully and instantly. It makes LaTeX feel like a thing of the past #footnote[Yes, indeed, you'd better believe it!]. asdf 
 
 == The subsection of doom <sec:subsec>
 
@@ -131,23 +131,29 @@ For good measure, we probably want to show a table of data, see @tab:example. #l
 
 #lorem(200)
 
-
 #bibliography("refs.bib")
 
 
+#show: appendix
 
-#appendix(title: [Derivation details], lbl: "app:demo-derivation")
+This is some text before the actual appendices start.  
 
-The appendix heading is lettered automatically, and equation numbering resets per
+$
+  H_("eff") = H_0 + Σ(ω)
+$ <eq:app-intro-1>
+
+= Derivation details <app:demo-derivation>
+
+The appendix heading is lettered automatically, and equation numbering resets per 
 appendix: (A1), (A2), etc. #lorem(20)
 
 $
-  H_{#text("eff")} = H_0 + Σ(ω)
+  H_("eff") = H_0 + Σ(ω)
 $ <eq:app-a1>
 
 See Eq.~@eq:app-a1 for the starting point of the derivation. #lorem(20)
 
-#appendix(title: [Finite-size correction], lbl: "app:demo-fse")
+= Finite-size correction <app:demo-fse>
 
 In the second appendix the numbering switches to (B1), (B2), ... automatically.
 

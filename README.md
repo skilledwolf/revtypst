@@ -1,7 +1,6 @@
 # stellar-revtex template
 
-Typst template that emulates many REVTeX (APS) conventions, built on top of the
-[JACoW Typst template](https://github.com/eltos/accelerated-jacow/).
+Typst template that emulates many REVTeX (APS) conventions.
 
 ## What's inside
 - `lib.typ`: the template entrypoint (`stellar_revtex` + `appendix`).
@@ -59,28 +58,15 @@ More details.
 - `show-grid`: `true` overlays a light layout grid for debugging.
 - Appendix helper: `#appendix(title: [...], lbl: "app:id")` auto letters appendices and resets equation numbering to (A1), (B1), ...
 
-## Roadmap
+## Important limitations
+- REVTeX-style `footinbib` is not currently possible due to fundamental limitations in typst bibliographies. 
+- Wide equations (`widetext`) spanning both columns in a two-column layout are not possible with Typst's layout engine yet.
 
-*Formatting*
-- [x] Mimic revtex title block, author block and abstract block
-- [x] Affiliation block (grouped-address and superscript styles)
-- [x] Fix edge cases for affiliation block (e.g., identical affiliations without superscripts)
-- [x] Mimic revtex heading formats
-- [x] Mimic figure and table caption format 
+## Author
+- Dr. Tobias Wolf — public@wolft.xyz
 
-*Article options*
-- [x] Two column
-- [x] One column
-- [x] Font size options
-
-*Environment*
-- [x] Implement `outline` fix (currently raises error due to headline definitions)
-- [x] `Appendix` environment
-- ~~[ ] Wide equations helper~~ _(not possible with current typst layout engine; known limitation)_
-
-*Other*
-- [x] Linking the superscripts in the author block to the corresponding end notes
-- [ ] Option to automatically turn footnotes in the manuscript into bib entries (`footinbib`-like)
+## Credits
+- inspired by the [JACoW Typst template](https://github.com/eltos/accelerated-jacow/).
 
 ## License
 GPL-3.0-only
