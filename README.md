@@ -78,7 +78,7 @@ More details.
 - ~~[ ] Wide equations helper~~ _(not possible with current typst layout engine; known limitation)_
 
 *Other*
-- [ ] Linking the superscripts in the author block to the corresponding end notes
+- [x] Linking the superscripts in the author block to the corresponding end notes
 - [ ] Option to automatically turn footnotes in the manuscript into bib entries (`footinbib`-like)
 
 ## License

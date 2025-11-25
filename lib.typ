@@ -88,6 +88,8 @@
   }
 }
 
+#let mergedNoteLabelName(idx) = "stellar-revtex-note-" + str(idx)
+
 // Format the inline author block (name + affiliation sup + star-based notes/emails).
 #let format-author-names(authors, aff_keys, mergedStuff, affiliation-style) = {
   let skipAff = shouldSkipAffSuperscripts(authors, aff_keys, affiliation-style)
@@ -124,14 +126,16 @@
       for key in these {
         // The star index is the position of ("note", key) in mergedStuff
         let idx = indexOf(mergedStuff, ("note", key), 0) + 1
-        sups += (starNumber(idx),)
+        let dest = label(mergedNoteLabelName(idx))
+        sups += (link(dest, starNumber(idx)),)
       }
     }
 
     // 3) email
     if "email" in a.keys() {
       let idx = indexOf(mergedStuff, ("email", a.email), 0) + 1
-      sups += (starNumber(idx),)
+      let dest = label(mergedNoteLabelName(idx))
+      sups += (link(dest, starNumber(idx)),)
     }
 
     // Turn sups into a single superscript
@@ -719,7 +723,8 @@
           } else {
             panic("Unknown kind in merged list")
           }
-          (out,)
+          // Label each item so author superscripts can link here
+          ([#out #label(mergedNoteLabelName(i+1))],)
         }
       ) 
       v(0.5em)
