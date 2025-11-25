@@ -6,6 +6,11 @@
 
 #show: stellar-revtex.with(
   paper-size: "us-letter",
+  // --- REVTeX-like options ---
+  journal: "aps",            // "aps" or "aip" (bibliography style)
+  layout: "reprint",         // "preprint", "reprint", "twocolumn", "onecolumn"
+  affiliation-style: "auto", // "auto", "superscript", "plain"
+  aps-journal: "physrev",    // "physrev" (default) or "prl" for PRL-like headings
   // Paper title
   title: [
     Theory of magnetoroton bands in moiré materials
@@ -39,14 +44,7 @@
   acknowledgment: [
     The Flatiron Institute is a division of the Simons Foundation. We acknowledge HPC resources provided by the Texas Advanced Computing Center at The University of Texas at Austin. This work was supported by a Simons Foundation Collaborative Research Grant, by Robert A. Welch Foundation Grant F–2112, and in part by NSF PHY–2309135 to the Kavli Institute for Theoretical Physics (KITP) and by NSF MRSEC DMR–2308817 through the Center for Dynamics and Control of Materials. B.M.K. acknowledges the hospitality of the Flatiron Institute during part of this work.
   ],
-  // Toggle a light layout grid overlay for debugging
-  show-grid: false,
-  // --- REVTeX-like options ---
-  journal: "aps",            // "aps" or "aip" (bibliography style)
-  layout: "reprint",         // "preprint", "reprint", "twocolumn", "onecolumn"
-  affiliation-style: "auto", // "auto", "superscript", "plain"
-  aps-journal: "physrev",    // "physrev" (default) or "prl" for PRL-like headings
-  date: datetime.today().display(),     // dynamic today; use datetime.today().format(...) to customize
+  date: datetime.today().display(),     // dynamic today; use string for fixed date
   pacs: [03.65.Yz, 42.50.Ct], // example PACS codes
   keywords: (
     "magnetoroton dispersion",

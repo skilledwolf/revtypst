@@ -245,7 +245,6 @@
   paper-size: "us-letter",
   abstract-title: none,
   bibliography-title: "References",
-  show-grid: false,
   font-size: none,          // 10pt / 11pt / 12pt or none for layout-based default
   // --- REVTeX-like options ---
   journal: "aps",              // "aps" or "aip" (affects bibliography style)
@@ -358,11 +357,6 @@
     } else {
       panic("Unsupported paper-size, use 'a4', 'us-letter' or 'jacow'!")
     },
-    ..if show-grid {
-      (background: [
-        // optional debugging grid
-      ])
-    }
   )
   // Column gutter is only relevant for two-column layouts
   set columns(gutter: if layout == "reprint" or layout == "twocolumn" { 0.25in } else { 0pt })
