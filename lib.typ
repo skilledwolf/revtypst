@@ -5,6 +5,7 @@
  */
 
 #import "@preview/numbly:0.1.0": numbly
+#import "@preview/orchid:0.1.0"
 
 // Keep a handle to the original footnote element so we can override it
 // inside the template without losing normal footnotes.
@@ -131,7 +132,13 @@
     } else if sups.len() > 1 {
       out += super(sups.join(", "))
     }
+
+    if "orcid" in a.keys() {
+      // Append ORCID icon/link after any superscripts
+      out += " " + orchid.generate-link(a.orcid)
+    }
   }
+
   out
 }
 
@@ -197,7 +204,6 @@
   paper-size: "us-letter",
   abstract-title: none,
   bibliography-title: "References",
-  bibliography-file: none,
   font-size: none,
   journal: "aps",
   layout: "reprint",
@@ -284,12 +290,8 @@
       (paper: "a4", margin: (top: 37mm, bottom: 19mm, x: 20mm))
     } else if paper-size in ("letter", "us-letter") {
       (paper: "us-letter", margin: (y: 0.75in, left: 0.75in, right: 0.75in))
-    } else if paper-size == "jacow" {
-      (width: 21cm, height: 11in, margin: (x: 20mm, y: 0.75in))
-    } else if paper-size == "test" {
-      (width: 21cm, height: auto, margin: (x: 20mm, y: 0.75in))
     } else {
-      panic("Unsupported paper-size, use 'a4', 'us-letter' or 'jacow'!")
+      panic("Unsupported paper-size, use 'a4' or 'us-letter'!")
     },
   )
   set columns(gutter: if layout == "reprint" or layout == "twocolumn" { 0.25in } else { 0pt })
@@ -611,7 +613,4 @@
   body
 
   // Bibliography is generated once at the end to avoid duplicate sources
-  if bibliography-file != none {
-    bibliography(bibliography-file)
-  }
 }

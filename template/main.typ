@@ -23,8 +23,8 @@
   ],
   authors: (
     (name: "John Doe", at: ("uniA","uniB"), note: ("equalContrib"), email:"expendable@planetexpress.fut"),
-    (name: "Jane Doe", at: "uniA", note: ("equalContrib", "deceased")),
-    (name: "Hubert J. Farnsworth", at: "uniA", email:"hj.farnsworth@planetexpress.fut"),
+    (name: "Jane Doe", at: "uniA",  orcid: "0000-0000-0000-0000", note: ("equalContrib", "deceased")),
+    (name: "Hubert J. Farnsworth", at: "uniA", orcid: "0000-0000-0000-0000", email:"hj.farnsworth@planetexpress.fut"),
   ),
   affiliations: (
     uniA: "Department of Examples, Example University",
@@ -64,7 +64,7 @@ The amazing part is that we can just type and get it rendered live in the previe
 $
   integral_0^infinity f(x) dif x = C,
 $
-and they will be rendered beautifully and instantly. It makes LaTeX feel like a thing of the past #footnote[Yes, indeed, you'd better believe it!]. asdf 
+and they will be rendered beautifully and instantly. It makes LaTeX feel like a thing of the past #footnote[Yes, indeed, you'd better believe it!].  
 
 == The subsection of doom <sec:subsec>
 
@@ -136,12 +136,6 @@ For good measure, we probably want to show a table of data, see @tab:example. #l
 
 #show: appendix
 
-This is some text before the actual appendices start.  
-
-$
-  H_("eff") = H_0 + Σ(ω)
-$ <eq:app-intro-1>
-
 = Derivation details <app:demo-derivation>
 
 The appendix heading is lettered automatically, and equation numbering resets per 
@@ -163,4 +157,4 @@ $ <eq:app-b1>
 
 Equation @eq:app-b1 now reads with the correct lettered index. #lorem(20)
 
-#lorem(100)
+#lorem(50)

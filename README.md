@@ -3,7 +3,7 @@
 Typst template that emulates many REVTeX (APS) conventions.
 
 ## What's inside
-- `lib.typ`: the template entrypoint (`stellar_revtex` + `appendix`).
+- `lib.typ`: the template entrypoint (`stellar-revtex` + `appendix`).
 - `template/main.typ`: minimal starter file.
 - `example/main.typ`: longer scientific sample with figures, tables, bib, and glossaries.
 - `typst.toml`: package metadata (`@local/stellar-revtex:0.1.0`).
@@ -53,9 +53,9 @@ More details.
 - `affiliation-style`: `"auto"` (skip superscripts if only one affiliation), `"superscript"`, `"plain"`.
 - `preprint-id`: string or content placed top-right (REVTeX `\preprint`).
 - `abstract-title`: `none` (default "Abstract"), `false` (hide), or custom content; `bibliography-title` analogous.
-- `funding`, `authorNotes`, `pacs`, `keywords`, `show-pacs`, `show-keywords` to mirror common REVTeX front-matter.
-- Author fields: `name` (required), `at`/`affiliation` (string or tuple), optional `note` keys matching `authorNotes`, optional `email`, optional `orcid` (prints linked ORCID icon).
-- `show-grid`: `true` overlays a light layout grid for debugging.
+- `funding`, `acknowledgment`, `date`, `authorNotes`, `pacs`, `keywords`, `show-pacs`, `show-keywords` to mirror common REVTeX front-matter.
+- Author fields: `name` (required), `at`/`affiliation` (string or tuple), optional `note` keys matching `authorNotes`, optional `email`, optional `orcid` (prints linked ORCID icon); aliases `by` for `name` and `names` (tuple) are accepted.
+- `show-appendix-heading`: `true` shows a visible "Appendix" heading in the outline.
 - Appendix helper: `#appendix(title: [...], lbl: "app:id")` auto letters appendices and resets equation numbering to (A1), (B1), ...
 
 ## Important limitations
